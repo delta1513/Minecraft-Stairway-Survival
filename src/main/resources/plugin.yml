@@ -1,0 +1,13 @@
+name: StairwaySurvival
+version: '${version}'
+main: io.github.delta1513.stairway.StairwayPlugin
+api-version: '26.3'
+description: Stairway Survival minigame
+authors: [delta1513]
+permissions:
+  stairway.play:
+    description: Join a team with /assignme
+    default: true
+  stairway.admin:
+    description: Administer the Stairway Survival game
+    default: op

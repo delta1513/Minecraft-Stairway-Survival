@@ -1,0 +1,23 @@
+game-world: world
+min-teams: 2
+countdown-seconds: 10
+survival-trigger-y: 319
+layer-interval-seconds: 60
+layers-per-interval: 2
+gameplay-area-size: 101
+plot-circle-radius: 20
+zone-check-interval-ticks: 1
+particle-interval-ticks: 10
+particle-view-distance: 64
+thunder-duration-seconds: 300
+block-ops-per-tick: 20000
+entity-spawns-per-tick: 200
+other-stones: [GRANITE, DIORITE, ANDESITE, TUFF]
+colours: [red, orange, yellow, lime, blue, purple]   # index = plot i in PLAN.md §3.1
+starter-kit:
+  OAK_SAPLING: 4
+  BONE_MEAL: 4
+  WHEAT_SEEDS: 4
+  TEAM_BED: 4
+  BREAD: 4
+  WATER_BUCKET: 1
