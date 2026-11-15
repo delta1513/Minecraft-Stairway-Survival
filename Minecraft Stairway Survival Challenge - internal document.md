@@ -18,7 +18,8 @@ date: 2026-11-14
     * A bucket of water
 * Each plot will use some sort of effect to demonstrate the borders of the plot. Whatever this is, it must be mostly transparent, and also visible by other players in other plots.
 * The borders of the plots are not impassible. When players pass through the first block outside of this wall, apply Poison I, Blindness, Nausea, Slowness III, Mining Fatigue V, and Hunger I for 1 minute.
-* When players venture past the first block outside the border, apply Wither V permanently.
+* When players go two or more blocks outside the border, apply Wither V permanently.
+* Plots are safe zones: any position that is not inside a plot or the 1-block ring around one counts as "two or more blocks outside", wherever it is on the map.
 * The gameplay area is 101×101 blocks centered on the spawn point. This border must prevent people from traversing it. This border should also have a transparent effect to denote its edges.
 
 # Operations
