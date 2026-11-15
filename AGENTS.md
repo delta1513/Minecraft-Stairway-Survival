@@ -23,6 +23,15 @@ Do **not** edit any of these three files. If code and spec disagree, the spec wi
 - **Base package:** `io.github.delta1513.stairway`.
 - Commands: `./gradlew test` runs the tests. `./gradlew build` builds the jar into `build/libs/`.
 
+### Setup facts learned so far
+- Gradle wrapper 9.9.1. The daemon runs on JDK 21. The project compiles and tests on Temurin 25, which foojay downloads into `~/.gradle/jdks`.
+- **Tests run on JUnit 6** (`junit-bom:6.1.3`), not 5, because MockBukkit `4.120.0` pulls in 6.x. The JUnit Jupiter API is the same.
+- Use **`plugin.yml`**, not `paper-plugin.yml`. Commands go through the Brigadier lifecycle API, so they are not declared in the descriptor.
+- `StairwayPlugin` must **not be `final`**, because MockBukkit subclasses it.
+- `paper-api` is also on `testImplementation`.
+- Maven Central sometimes **rate-limits this container**: it serves 404 with `retry-after`, and Gradle caches the miss. **Do not add extra repositories to the project build files.**
+  - In the cloud dev container, run Gradle with `-I /tmp/claude-0/-home-user-Minecraft-Stairway-Survival/7dfa9644-7238-59c5-a62a-b8de1fe7bb94/scratchpad/mirror.init.gradle.kts`, e.g. `./gradlew -I <that path> build`. This init script is session-local and adds Google's Maven Central mirror.
+
 ## How to work
 
 - **TDD.** Write or extend the tests first, watch them fail, then implement. A milestone is done only when `./gradlew build` (which includes the tests) passes.
