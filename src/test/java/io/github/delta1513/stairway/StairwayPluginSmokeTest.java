@@ -16,6 +16,7 @@ class StairwayPluginSmokeTest {
     @BeforeEach
     void setUp() {
         server = MockBukkit.mock();
+        server.addSimpleWorld("world");
         plugin = MockBukkit.load(StairwayPlugin.class);
     }
 
