@@ -117,6 +117,10 @@ public class StairwayPlugin extends JavaPlugin {
                 .toList();
     }
 
+    public SurvivalPhaseHandler survivalHandler() {
+        return survival;
+    }
+
     public BlockJobQueue jobQueue() {
         return jobQueue;
     }
