@@ -218,6 +218,57 @@ class GameManagerTest {
         assertFalse(env.called("countdown:" + c + ":red"));
     }
 
+    // ---- forceAssign (admin override, PLAN.md §11.1) ----
+
+    @Test
+    void forceAssignAssignsAnUnassignedPlayer() {
+        join(a);
+        assertEquals(AssignResult.ASSIGNED, game.forceAssign(a, "lime"));
+        assertEquals("lime", game.plotOf(a).orElseThrow().colour());
+        assertTrue(env.broadcasts.contains(env.nameOf(a) + " joined lime"));
+    }
+
+    @Test
+    void forceAssignOverridesAnExistingAssignment() {
+        join(a, b);
+        game.assign(a, "red");
+        assertEquals(AssignResult.ASSIGNED, game.forceAssign(a, "blue"));
+        assertEquals("blue", game.plotOf(a).orElseThrow().colour());
+        // b still unassigned, so no start yet
+        assertEquals(Phase.LOBBY, game.phase());
+    }
+
+    @Test
+    void forceAssignToTheSameColourKeepsItAssigned() {
+        join(a, b);
+        game.assign(a, "red");
+        assertEquals(AssignResult.ASSIGNED, game.forceAssign(a, "red"));
+        assertEquals("red", game.plotOf(a).orElseThrow().colour());
+    }
+
+    @Test
+    void forceAssignUnknownColourLeavesTheOldAssignment() {
+        join(a, b);
+        game.assign(a, "red");
+        assertEquals(AssignResult.UNKNOWN_COLOUR, game.forceAssign(a, "pink"));
+        assertEquals("red", game.plotOf(a).orElseThrow().colour());
+    }
+
+    @Test
+    void forceAssignOutsideLobbyIsRejected() {
+        startBuild();
+        assertEquals(AssignResult.NOT_IN_LOBBY, game.forceAssign(a, "lime"));
+        assertEquals("red", game.plotOf(a).orElseThrow().colour());
+    }
+
+    @Test
+    void forceAssignCanTriggerTheCountdown() {
+        join(a, b);
+        game.assign(a, "red");
+        game.forceAssign(b, "blue");
+        assertEquals(Phase.COUNTDOWN, game.phase());
+    }
+
     @Test
     void assignedPlayerRejoiningDuringCountdownIsTeleportedAndLocked() {
         startTwoTeams();

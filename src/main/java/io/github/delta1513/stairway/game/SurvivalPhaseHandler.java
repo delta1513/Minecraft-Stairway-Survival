@@ -11,6 +11,11 @@ public interface SurvivalPhaseHandler {
 
     void stop();
 
+    /** The floor of the remaining arena while the layer clock runs; empty otherwise. */
+    default java.util.OptionalInt nextLayerY() {
+        return java.util.OptionalInt.empty();
+    }
+
     /** Default that does nothing, until the survival milestone is wired in. */
     SurvivalPhaseHandler NOOP = new SurvivalPhaseHandler() {
         @Override
