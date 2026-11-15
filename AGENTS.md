@@ -32,6 +32,27 @@ Do **not** edit any of these three files. If code and spec disagree, the spec wi
 - Maven Central sometimes **rate-limits this container**: it serves 404 with `retry-after`, and Gradle caches the miss. **Do not add extra repositories to the project build files.**
   - In the cloud dev container, run Gradle with `-I /tmp/claude-0/-home-user-Minecraft-Stairway-Survival/7dfa9644-7238-59c5-a62a-b8de1fe7bb94/scratchpad/mirror.init.gradle.kts`, e.g. `./gradlew -I <that path> build`. This init script is session-local and adds Google's Maven Central mirror.
 
+### API facts verified against the 26.3 API jar
+- **Gamerules:** use the new `org.bukkit.GameRules` class: `GameRules.KEEP_INVENTORY`, and `GameRules.ADVANCE_TIME` (formerly `doDaylightCycle`). The `GameRule.*` constants are deprecated.
+- **Potion effects:** `PotionEffectType` constants are `NAUSEA`, `SLOWNESS`, `MINING_FATIGUE`, `JUMP_BOOST`, `HUNGER`, `POISON`, `BLINDNESS`, `WITHER`. `PotionEffect.INFINITE_DURATION` exists.
+- **Respawn:** `PlayerRespawnEvent#isBedSpawn()` is inherited from `io.papermc.paper.event.player.AbstractRespawnEvent`.
+- **Max health:** the attribute is `Attribute.MAX_HEALTH`.
+- **`Tag.FLOWERS`** also contains `CHERRY_LEAVES` and `FLOWERING_AZALEA_LEAVES`, plus spore blossom, chorus flower, pink petals, etc. **Design decision: use the whole tag as-is.**
+- **Two-tall flowers:** no tall-flowers tag exists. Detect the upper half via `Bisected` `Half.TOP`.
+- **MockBukkit gaps:**
+  - `Chunk#addPluginChunkTicket` is unimplemented (`PlotPreparer.useChunkTickets` is the test seam).
+  - `ChunkSnapshotMock` doesn't reflect earlier edits.
+  - Test worlds have min height 0.
+  - A plugin subclass loaded in tests gets no `plugin.yml` permissions.
+
+### Still unverified (needs a live server)
+- Y range −64..319.
+- Wither V time-to-kill.
+- Real bed respawn and obstruction behaviour.
+- The world border blocking ender pearls.
+- `setType(AIR, false)` on containers.
+- Boss bar rendering, chunk tickets, `ChunkSnapshot` scans under load, mob spawns, Brigadier tab-completion and ops permissions.
+
 ## How to work
 
 - **TDD.** Write or extend the tests first, watch them fail, then implement. A milestone is done only when `./gradlew build` (which includes the tests) passes.
