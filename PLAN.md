@@ -163,13 +163,18 @@ A task runs every tick (`zone-check-interval-ticks`, default **1**). For each on
 
 | Transition into | Action |
 |---|---|
-| `RING` (from INSIDE or WILD, or by teleport) | Apply for **60 s**: Poison I, Blindness I, Nausea I, Slowness III, Mining Fatigue V, Hunger I. Amplifier = level − 1. |
-| `WILD` | Apply **Wither V** (amplifier 4) with **infinite** duration (`PotionEffect.INFINITE_DURATION`). It is **never removed by the plugin**. Only death clears it. |
-| `INSIDE` | Nothing. Ring effects keep running out their 60 s, and Wither stays. |
+| `RING` (from INSIDE or WILD, or by teleport) | Broadcast a `ring_entered` message (§15). Apply the ring effects (below). |
+| `WILD` | Broadcast a `wither_doomed` message (§15). Apply **Wither X** (amplifier 9) with **infinite** duration (`PotionEffect.INFINITE_DURATION`). It is **never removed by the plugin**. Only death clears it. |
+| `INSIDE` | Nothing. Ring effects wear off within 3 s, and Wither stays. |
 
-- The ring effects are applied once per entry, not refreshed every tick. Going in and out of the ring applies them again.
+**Ring effects** (config `ring-effects`, levels; amplifier = level − 1), each with duration `ring-effect-seconds` (default **3**):
+Poison II, Blindness I, Nausea I, Slowness X, Mining Fatigue X, Hunger I, Weakness V.
+
+- **Refresh while in the ring:** on every zone check where the player is in `RING`, re-apply the ring effects at full duration (overwriting the existing ones). So they stay on while the player stands in the ring and wear off `ring-effect-seconds` after they leave.
+- The `ring_entered` message is sent only on the transition into `RING`, not on every refresh.
+- The Wither level is config `wither-level` (default **10**).
 - Ender pearls need no special code. Landing `INSIDE` any active plot triggers nothing, and landing in RING or WILD is handled by the table above.
-- Wither V kills in about 2 s (§13), so WILD effectively means death and then the bed rules in §9.1.
+- Wither X kills almost instantly, so WILD effectively means death and then the bed rules in §9.1.
 
 ---
 
@@ -214,7 +219,7 @@ Any unassigned player who is online when COUNTDOWN starts, or who joins later, i
 
 ### 9.1 BUILD phase
 In `PlayerRespawnEvent` for an alive participant:
-- If `event.isBedSpawn()` is true, respawn at the bed as normal. **One tick later**, apply one death penalty picked uniformly at random from the list below.
+- If `event.isBedSpawn()` is true, respawn at the bed as normal. **One tick later**, pick one death penalty uniformly at random from the list below and run the wheel spin (§15.3): broadcast a `wheel_spin` message, then apply the penalty and broadcast its effect message `wheel-spin-seconds` (default **5**) later. Skip the penalty if, by then, the player is offline, disqualified, or the phase is no longer BUILD.
 - Otherwise (no bed, or the bed is broken or obstructed), let the respawn happen and then call `disqualify(player, "no bed")`. This catches the respawn-at-world-spawn death loop.
 
 Death penalties:
@@ -265,7 +270,7 @@ Set every block in the 101×101 area at Y = `nextLayerY` and `nextLayerY + 1` to
 | 12 | Hunger + nausea | All online alive participants: Hunger III + Nausea I, 60 s |
 | 13 | Jump Boost X | All online alive participants: Jump Boost amplifier 9, 60 s |
 
-Broadcast the effect name in chat when it fires.
+The effect is picked at the interval, then goes through the wheel spin (§15.3): broadcast a `wheel_spin` message, wait `wheel-spin-seconds`, apply the effect and broadcast its effect message. Cancel a pending effect if the game ends or is reset.
 
 Entity spawns from effects 9 and 10 are capped per tick at `entity-spawns-per-tick` (default **200**). This spreads them over time: every block still gets its mob.
 
@@ -283,6 +288,7 @@ Entity spawns from effects 9 and 10 are capped per tick at `entity-spawns-per-ti
 | `/stairway survival` | admin | BUILD | Force SURVIVAL (for testing) |
 | `/stairway disqualify <player>` | admin | BUILD/SURVIVAL | §8 |
 | `/stairway reset` | admin | any | §4.5 |
+| `/stairway reloadmessages` | admin | any | Reload `messages.json` (§15) |
 
 ### 11.2 `config.yml` (defaults)
 ```yaml
@@ -298,6 +304,12 @@ zone-check-interval-ticks: 1
 particle-interval-ticks: 10
 particle-view-distance: 64
 thunder-duration-seconds: 300
+ring-effect-seconds: 3
+ring-effects: {POISON: 2, BLINDNESS: 1, NAUSEA: 1, SLOWNESS: 10, MINING_FATIGUE: 10, HUNGER: 1, WEAKNESS: 5}
+wither-level: 10
+wheel-spin-seconds: 5
+lobby-reminder-min-seconds: 30
+lobby-reminder-max-seconds: 60
 block-ops-per-tick: 20000
 entity-spawns-per-tick: 200
 other-stones: [GRANITE, DIORITE, ANDESITE, TUFF]
@@ -362,7 +374,42 @@ These assumptions need a cited source before or during implementation:
 - `setType(AIR, false)` on a container removes its contents without dropping them.
 - The Brigadier command registration API and the plugin descriptor (`plugin.yml` vs `paper-plugin.yml`) for 26.3.
 
-## 14. Non-goals
+## 15. Chat messages (`messages.json`)
+
+All flavour messages live in `plugins/StairwaySurvival/messages.json`, which server owners edit by hand. The default file ships in the jar and is copied there on first run. It is never overwritten. `/stairway reloadmessages` reloads it.
+
+### 15.1 Rules
+- **Every message is broadcast to everyone** on the server.
+- Each section is a list of strings. When a message is needed, pick one uniformly at random from its section. An empty or missing section sends nothing; a missing section logs a warning once.
+- Messages are **MiniMessage** strings (so `<red>`, `<bold>` etc. work).
+- `PLAYER_NAME` in a message is replaced with the target player's name, inserted as plain text (not parsed as MiniMessage). If the message has no target player, `PLAYER_NAME` is replaced with `everyone`.
+- If the file is invalid JSON, log an error and use the defaults bundled in the jar.
+
+### 15.2 Sections
+| Key | When | Target player |
+|---|---|---|
+| `lobby_reminders` | Repeatedly in LOBBY, every random interval between `lobby-reminder-min-seconds` and `lobby-reminder-max-seconds` (30–60 s). Stops when LOBBY ends, restarts on reset | none |
+| `countdown` | Once, when COUNTDOWN starts | none |
+| `survival_start` | Once, when SURVIVAL starts. Replaces the old hard-coded "reached Y=319" broadcast | the player who triggered it (none if forced by admin) |
+| `ring_entered` | A player enters `RING` (§6) | that player |
+| `wither_doomed` | A player enters `WILD` (§6) | that player |
+| `wheel_spin` | Before every death penalty and survival effect (§15.3) | the penalised player for death penalties; none for survival effects |
+| `effects.<KEY>` | When that effect is applied. Replaces the old effect-name broadcast and the private "Death penalty: X" message | the penalised player for `DEATH_*`; none for `SURVIVAL_*` |
+
+Effect keys (one per death penalty in §9.1 and survival effect in §10.2):
+`DEATH_FEATHERS`, `DEATH_BLINDNESS`, `DEATH_NAUSEA`, `DEATH_WATER_ABOVE`, `DEATH_THUNDERSTORM`, `DEATH_JUMP_BOOST`,
+`SURVIVAL_PERMANENT_NIGHT`, `SURVIVAL_THUNDERSTORM`, `SURVIVAL_REMOVE_PLANKS`, `SURVIVAL_REMOVE_ORES`, `SURVIVAL_ZOMBIE_SKELETON`, `SURVIVAL_REMOVE_OTHER_STONES`, `SURVIVAL_REMOVE_GRASS`, `SURVIVAL_SILVERFISH`, `SURVIVAL_LEAVES_TO_CHICKENS`, `SURVIVAL_FLOWERS_TO_CREEPERS`, `SURVIVAL_WATER_TO_LAVA`, `SURVIVAL_HUNGER_NAUSEA`, `SURVIVAL_JUMP_BOOST`.
+
+The default file has exactly one message in every section.
+
+### 15.3 Wheel spin
+1. The effect is picked (§9.1 / §10.2).
+2. Broadcast a `wheel_spin` message.
+3. After `wheel-spin-seconds` (default **5**), apply the effect and broadcast its `effects.<KEY>` message.
+
+Other system broadcasts (team joins, disqualifications, the winner) stay hard-coded.
+
+## 16. Non-goals
 - Persisting a game across server restarts.
 - Resetting or regenerating the world after a game.
 - Tie-breaking when the last teams die at the same time, or anything after the arena is fully removed.
