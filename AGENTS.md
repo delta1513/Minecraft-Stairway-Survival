@@ -45,14 +45,6 @@ Do **not** edit any of these three files. If code and spec disagree, the spec wi
   - Test worlds have min height 0.
   - A plugin subclass loaded in tests gets no `plugin.yml` permissions.
 
-### Still unverified (needs a live server)
-- Y range −64..319.
-- Wither V time-to-kill.
-- Real bed respawn and obstruction behaviour.
-- The world border blocking ender pearls.
-- `setType(AIR, false)` on containers.
-- Boss bar rendering, chunk tickets, `ChunkSnapshot` scans under load, mob spawns, Brigadier tab-completion and ops permissions.
-
 ## How to work
 
 - **TDD.** Write or extend the tests first, watch them fail, then implement. A milestone is done only when `./gradlew build` (which includes the tests) passes.
