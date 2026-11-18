@@ -10,6 +10,7 @@ import io.github.delta1513.stairway.game.AssignResult;
 import io.github.delta1513.stairway.game.GameManager;
 import io.github.delta1513.stairway.game.Phase;
 import io.github.delta1513.stairway.game.SurvivalPhaseHandler;
+import io.github.delta1513.stairway.messages.Messages;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import java.util.LinkedHashMap;
@@ -34,8 +35,11 @@ public final class StairwayCommand {
     private final GameManager game;
     private final SurvivalPhaseHandler survival;
     private final List<String> colours;
+    private final Messages messages;
 
-    public StairwayCommand(Server server, GameManager game, SurvivalPhaseHandler survival, List<String> colours) {
+    public StairwayCommand(Server server, GameManager game, SurvivalPhaseHandler survival, List<String> colours,
+            Messages messages) {
+        this.messages = messages;
         this.server = server;
         this.game = game;
         this.survival = survival;
@@ -64,6 +68,7 @@ public final class StairwayCommand {
                             return Command.SINGLE_SUCCESS;
                         })))
                 .then(Commands.literal("reset").executes(ctx -> run(ctx.getSource(), this::reset)))
+                .then(Commands.literal("reloadmessages").executes(ctx -> run(ctx.getSource(), this::reloadMessages)))
                 .build();
     }
 
@@ -136,7 +141,7 @@ public final class StairwayCommand {
             error(sender, "Survival can only be forced during BUILD (phase is " + game.phase() + ").");
             return;
         }
-        game.startSurvival("Survival phase forced by an admin.");
+        game.startSurvival(null);
     }
 
     public void disqualify(CommandSender sender, String playerName) {
@@ -151,6 +156,11 @@ public final class StairwayCommand {
     public void reset(CommandSender sender) {
         game.reset();
         ok(sender, "Game reset; back in the lobby.");
+    }
+
+    public void reloadMessages(CommandSender sender) {
+        messages.reload();
+        ok(sender, "messages.json reloaded.");
     }
 
     // ---- player lookup ----

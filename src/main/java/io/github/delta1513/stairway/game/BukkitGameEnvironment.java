@@ -5,7 +5,9 @@ import io.github.delta1513.stairway.arena.Plot;
 import io.github.delta1513.stairway.config.GameConfig;
 import java.time.Duration;
 import java.util.Collection;
+import io.github.delta1513.stairway.messages.Messages;
 import java.util.UUID;
+import java.util.function.Consumer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.title.Title;
@@ -36,9 +38,11 @@ public final class BukkitGameEnvironment implements GameEnvironment {
     private final Arena arena;
     private final PlotPreparer plots;
     private final PenaltyApplier penalties;
+    private final Messages messages;
 
     public BukkitGameEnvironment(Server server, World world, Arena arena, GameConfig config, PlotPreparer plots,
-            PenaltyApplier penalties) {
+            PenaltyApplier penalties, Messages messages) {
+        this.messages = messages;
         this.server = server;
         this.world = world;
         this.arena = arena;
@@ -136,11 +140,19 @@ public final class BukkitGameEnvironment implements GameEnvironment {
     }
 
     @Override
-    public void applyRandomPenalty(UUID id) {
-        Player p = server.getPlayer(id);
-        if (p != null) {
-            penalties.applyRandom(p);
-        }
+    public void message(String section, UUID target) {
+        messages.broadcast(section, target == null ? null : nameOf(target));
+    }
+
+    @Override
+    public Runnable pickPenalty(UUID id) {
+        Consumer<Player> penalty = penalties.pickRandom();
+        return () -> {
+            Player p = server.getPlayer(id);
+            if (p != null) {
+                penalty.accept(p);
+            }
+        };
     }
 
     @Override

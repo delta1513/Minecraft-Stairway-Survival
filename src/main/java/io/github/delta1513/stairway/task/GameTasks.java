@@ -5,6 +5,7 @@ import io.github.delta1513.stairway.config.GameConfig;
 import io.github.delta1513.stairway.game.GameManager;
 import io.github.delta1513.stairway.game.Phase;
 import io.github.delta1513.stairway.game.PhaseListener;
+import io.github.delta1513.stairway.messages.Messages;
 import java.util.ArrayList;
 import java.util.List;
 import org.bukkit.World;
@@ -22,22 +23,27 @@ public final class GameTasks implements PhaseListener {
     private final Arena arena;
     private final GameConfig config;
     private final World world;
+    private final ZoneEffects zoneEffects;
+    private final Messages messages;
     private final List<BukkitTask> buildTasks = new ArrayList<>();
     private BukkitTask triggerTask;
 
-    public GameTasks(Plugin plugin, GameManager game, Arena arena, GameConfig config, World world) {
+    public GameTasks(Plugin plugin, GameManager game, Arena arena, GameConfig config, World world,
+            Messages messages) {
         this.plugin = plugin;
         this.game = game;
         this.arena = arena;
         this.config = config;
         this.world = world;
+        this.messages = messages;
+        this.zoneEffects = new ZoneEffects(config); // fails fast on a bad ring-effects list
     }
 
     @Override
     public void phaseChanged(Phase from, Phase to) {
         if (to == Phase.BUILD) {
             var scheduler = plugin.getServer().getScheduler();
-            buildTasks.add(scheduler.runTaskTimer(plugin, new ZoneTask(game, arena, world), 0L,
+            buildTasks.add(scheduler.runTaskTimer(plugin, new ZoneTask(game, arena, world, zoneEffects, messages), 0L,
                     config.zoneCheckIntervalTicks()));
             buildTasks.add(scheduler.runTaskTimer(plugin, new ParticleTask(game, config, world), 0L,
                     config.particleIntervalTicks()));

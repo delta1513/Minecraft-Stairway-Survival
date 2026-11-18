@@ -8,6 +8,11 @@ import io.github.delta1513.stairway.effects.RandomPenaltyApplier;
 import io.github.delta1513.stairway.game.BukkitSurvivalHandler;
 import io.github.delta1513.stairway.world.BlockJobQueue;
 import io.github.delta1513.stairway.world.BukkitBlocks;
+import io.github.delta1513.stairway.messages.Messages;
+import java.io.File;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Random;
 import org.bukkit.entity.Player;
@@ -36,11 +41,15 @@ public class StairwayPlugin extends JavaPlugin {
     private World world;
     private BlockJobQueue jobQueue;
     private SurvivalPhaseHandler survival;
+    private Messages messages;
+
+    private static final String MESSAGES_FILE = "messages.json";
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         gameConfig = GameConfig.from(getConfig());
+        messages = createMessages();
 
         world = getServer().getWorld(gameConfig.gameWorld());
         if (world == null) {
@@ -54,10 +63,10 @@ public class StairwayPlugin extends JavaPlugin {
 
         plotPreparer = new PlotPreparer(this, world, arena, gameConfig);
         BukkitGameEnvironment env = new BukkitGameEnvironment(getServer(), world, arena, gameConfig, plotPreparer,
-                createPenaltyApplier());
+                createPenaltyApplier(), messages);
         survival = createSurvivalHandler();
-        game = new GameManager(gameConfig, arena, env, new BukkitGameScheduler(this), survival);
-        tasks = new GameTasks(this, game, arena, gameConfig, world);
+        game = new GameManager(gameConfig, arena, env, new BukkitGameScheduler(this), survival, createRandom());
+        tasks = new GameTasks(this, game, arena, gameConfig, world, messages);
         game.addPhaseListener(tasks);
 
         env.applyWorldSettings(); // world border (§3.3) and keepInventory=false (§9)
@@ -68,11 +77,13 @@ public class StairwayPlugin extends JavaPlugin {
         pm.registerEvents(new DeathListener(game, gameConfig.gameWorld()), this);
 
         AssignMeCommand assignMe = new AssignMeCommand(game, gameConfig.colours());
-        StairwayCommand stairway = new StairwayCommand(getServer(), game, survival, gameConfig.colours());
+        StairwayCommand stairway = new StairwayCommand(getServer(), game, survival, gameConfig.colours(), messages);
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             event.registrar().register(assignMe.build(), "Join a team");
             event.registrar().register(stairway.build(), "Administer the Stairway Survival game");
         });
+
+        game.startLobbyReminders();
 
         // Players already online (e.g. after /reload) are treated as joining the lobby.
         getServer().getOnlinePlayers().forEach(p -> game.handleJoin(p.getUniqueId()));
@@ -93,6 +104,21 @@ public class StairwayPlugin extends JavaPlugin {
         }
     }
 
+    /** Loads {@code messages.json}, copying the bundled default to the data folder on first run (§15). */
+    private Messages createMessages() {
+        File file = new File(getDataFolder(), MESSAGES_FILE);
+        if (!file.exists()) {
+            saveResource(MESSAGES_FILE, false);
+        }
+        return new Messages(createRandom(), component -> getServer().broadcast(component), getLogger(),
+                () -> file.isFile() ? Files.readString(file.toPath(), StandardCharsets.UTF_8) : null,
+                () -> {
+                    try (InputStream in = getResource(MESSAGES_FILE)) {
+                        return in == null ? null : new String(in.readAllBytes(), StandardCharsets.UTF_8);
+                    }
+                });
+    }
+
     /** Randomness for penalties and survival effects; overridable so tests can make it deterministic. */
     protected Random createRandom() {
         return new Random();
@@ -100,14 +126,14 @@ public class StairwayPlugin extends JavaPlugin {
 
     /** Wiring point for the death penalties (PLAN.md §9.1). */
     protected PenaltyApplier createPenaltyApplier() {
-        return new RandomPenaltyApplier(createRandom(), gameConfig.thunderDurationSeconds());
+        return new RandomPenaltyApplier(createRandom(), gameConfig.thunderDurationSeconds(), messages);
     }
 
     /** Wiring point for the survival phase (PLAN.md §4.4). */
     protected SurvivalPhaseHandler createSurvivalHandler() {
         jobQueue = new BlockJobQueue(gameConfig.blockOpsPerTick(), gameConfig.entitySpawnsPerTick());
         return new BukkitSurvivalHandler(this, world, arena, gameConfig, jobQueue, this::aliveOnlineParticipants,
-                new BukkitGameScheduler(this), createRandom(), BukkitBlocks.asyncExecutor(this));
+                new BukkitGameScheduler(this), createRandom(), BukkitBlocks.asyncExecutor(this), messages);
     }
 
     private List<Player> aliveOnlineParticipants() {
@@ -123,6 +149,10 @@ public class StairwayPlugin extends JavaPlugin {
 
     public BlockJobQueue jobQueue() {
         return jobQueue;
+    }
+
+    public Messages messages() {
+        return messages;
     }
 
     public GameConfig gameConfig() {

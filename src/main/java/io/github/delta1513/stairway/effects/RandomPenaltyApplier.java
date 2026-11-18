@@ -2,25 +2,29 @@ package io.github.delta1513.stairway.effects;
 
 import io.github.delta1513.stairway.game.PenaltyApplier;
 import java.util.Random;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
+import java.util.function.Consumer;
+import io.github.delta1513.stairway.messages.Messages;
 import org.bukkit.entity.Player;
 
-/** {@link PenaltyApplier} that picks a {@link DeathPenalty} uniformly, applies it and tells the player. */
+/** {@link PenaltyApplier} that picks a {@link DeathPenalty} uniformly; its action applies it and broadcasts the effect message. */
 public final class RandomPenaltyApplier implements PenaltyApplier {
 
     private final Random random;
     private final int thunderDurationSeconds;
+    private final Messages messages;
 
-    public RandomPenaltyApplier(Random random, int thunderDurationSeconds) {
+    public RandomPenaltyApplier(Random random, int thunderDurationSeconds, Messages messages) {
         this.random = random;
         this.thunderDurationSeconds = thunderDurationSeconds;
+        this.messages = messages;
     }
 
     @Override
-    public void applyRandom(Player player) {
+    public Consumer<Player> pickRandom() {
         DeathPenalty penalty = DeathPenalty.random(random);
-        penalty.apply(player, thunderDurationSeconds);
-        player.sendMessage(Component.text("Death penalty: " + penalty.displayName(), NamedTextColor.RED));
+        return player -> {
+            penalty.apply(player, thunderDurationSeconds);
+            messages.broadcast(Messages.effectSection(penalty.messageKey()), player.getName());
+        };
     }
 }

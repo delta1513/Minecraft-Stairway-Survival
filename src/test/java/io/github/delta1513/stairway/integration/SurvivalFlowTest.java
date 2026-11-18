@@ -130,12 +130,18 @@ class SurvivalFlowTest {
         // Past the interval: two layers gone (the removal is spread over a couple of ticks), effect fired.
         allMessages(alice);
         server.getScheduler().performTicks(10);
+        String spin = allMessages(alice);
+        assertTrue(spin.contains("Wheel of Misfortune"), spin);
         assertTrue(layerIs(bottom, Material.AIR), "bottom layer should be air");
         assertTrue(layerIs(bottom + 1, Material.AIR), "second layer should be air");
         assertTrue(layerIs(bottom + 2, Material.STONE), "third layer must be untouched");
         assertEquals(bottom + 2, plugin.survivalHandler().nextLayerY().orElseThrow());
+        // The effect itself waits for the wheel spin.
+        assertNull(alice.getPotionEffect(PotionEffectType.NAUSEA));
+        server.getScheduler().performTicks(20L * plugin.gameConfig().wheelSpinSeconds());
         String msgs = allMessages(alice);
-        assertTrue(msgs.contains("Survival effect: " + SurvivalEffect.HUNGER_NAUSEA.displayName()), msgs);
+        assertTrue(msgs.contains("tummy is growling"), msgs);
+        assertFalse(msgs.contains("Survival effect:"), msgs);
         assertNotNull(alice.getPotionEffect(PotionEffectType.NAUSEA));
         assertNotNull(bob.getPotionEffect(PotionEffectType.NAUSEA));
         assertTrue(plugin.jobQueue().isIdle());
@@ -148,6 +154,21 @@ class SurvivalFlowTest {
         assertTrue(plugin.survivalHandler().nextLayerY().isEmpty());
         server.getScheduler().performTicks(20L * interval * 2);
         assertTrue(layerIs(bottom + 2, Material.STONE), "no more layers after the game ended");
+    }
+
+    @Test
+    void pendingEffectIsCancelledWhenTheGameEnds() {
+        PlayerMock alice = server.addPlayer("Alice");
+        PlayerMock bob = server.addPlayer("Bob");
+        plugin.game().assign(alice.getUniqueId(), "red");
+        plugin.game().assign(bob.getUniqueId(), "blue");
+        server.getScheduler().performTicks(20L * plugin.gameConfig().countdownSeconds() + 1);
+        console("stairway survival");
+        server.getScheduler().performTicks(20L * plugin.gameConfig().layerIntervalSeconds() + 5);
+        console("stairway disqualify Bob");
+        assertEquals(Phase.ENDED, plugin.game().phase());
+        server.getScheduler().performTicks(20L * plugin.gameConfig().wheelSpinSeconds() + 5);
+        assertNull(alice.getPotionEffect(PotionEffectType.NAUSEA));
     }
 
     @Test

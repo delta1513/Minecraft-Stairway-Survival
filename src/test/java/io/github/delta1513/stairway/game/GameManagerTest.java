@@ -62,6 +62,16 @@ class GameManagerTest {
         assertEquals(Phase.BUILD, game.phase());
     }
 
+    /** a and c on red, b on blue, in BUILD (so disqualifying a does not end the game). */
+    private void startThreeTeamsInBuild() {
+        join(a, b, c);
+        game.assign(a, "red");
+        game.assign(c, "red");
+        game.assign(b, "blue");
+        scheduler.tick(20 * 3);
+        assertEquals(Phase.BUILD, game.phase());
+    }
+
     // ---- LOBBY ----
 
     @Test
@@ -408,13 +418,60 @@ class GameManagerTest {
     // ---- death & respawn ----
 
     @Test
-    void buildRespawnAtBedAppliesPenaltyOneTickLater() {
+    void buildRespawnAtBedSpinsWheelOneTickLaterThenAppliesPenaltyAfterWheelSpinSeconds() {
         startBuild();
+        env.messages.clear();
         game.onRespawn(a, true);
+        assertEquals(0, env.count("pick:"));
+        scheduler.tick(1);
+        assertEquals(1, env.count("pick:"));
+        assertEquals(List.of("wheel_spin:" + a), env.messages);
+        assertEquals(0, env.count("penalty:"));
+        scheduler.tick(5 * 20 - 1);
         assertEquals(0, env.count("penalty:"));
         scheduler.tick(1);
         assertTrue(env.called("penalty:" + a));
         assertTrue(game.isAliveParticipant(a));
+    }
+
+    @Test
+    void penaltySkippedIfPlayerGoesOfflineDuringTheSpin() {
+        startBuild();
+        game.onRespawn(a, true);
+        scheduler.tick(1);
+        env.online.remove(a);
+        scheduler.tick(5 * 20);
+        assertEquals(0, env.count("penalty:"));
+    }
+
+    @Test
+    void penaltySkippedIfPlayerDisqualifiedDuringTheSpin() {
+        startThreeTeamsInBuild();
+        game.onRespawn(a, true);
+        scheduler.tick(1);
+        game.disqualify(a, "x");
+        scheduler.tick(5 * 20);
+        assertEquals(0, env.count("penalty:"));
+    }
+
+    @Test
+    void penaltySkippedIfPhaseLeavesBuildDuringTheSpin() {
+        startBuild();
+        game.onRespawn(a, true);
+        scheduler.tick(1);
+        game.startSurvival(null);
+        scheduler.tick(5 * 20);
+        assertEquals(0, env.count("penalty:"));
+    }
+
+    @Test
+    void penaltySkippedAfterReset() {
+        startBuild();
+        game.onRespawn(a, true);
+        scheduler.tick(1);
+        game.reset();
+        scheduler.tick(5 * 20);
+        assertEquals(0, env.count("penalty:"));
     }
 
     @Test
@@ -487,13 +544,22 @@ class GameManagerTest {
     // ---- survival ----
 
     @Test
-    void startSurvivalSwitchesPhaseBroadcastsAndCallsHandler() {
+    void startSurvivalSwitchesPhaseMessagesAndCallsHandler() {
         startBuild();
-        game.startSurvival("Pa reached Y=319! The survival phase begins.");
+        env.messages.clear();
+        game.startSurvival(a);
         assertEquals(Phase.SURVIVAL, game.phase());
         assertEquals(1, survival.starts);
-        assertTrue(env.broadcasts.contains("Pa reached Y=319! The survival phase begins."));
+        assertEquals(List.of("survival_start:" + a), env.messages);
         assertEquals(Phase.SURVIVAL, phases.get(phases.size() - 1));
+    }
+
+    @Test
+    void adminForcedSurvivalHasNoTargetPlayer() {
+        startBuild();
+        env.messages.clear();
+        game.startSurvival(null);
+        assertEquals(List.of("survival_start:null"), env.messages);
     }
 
     @Test
@@ -535,6 +601,75 @@ class GameManagerTest {
         assertTrue(env.called("lobby:" + b));
         // can play again
         assertEquals(AssignResult.ASSIGNED, game.assign(a, "red"));
+    }
+
+    // ---- flavour messages ----
+
+    @Test
+    void countdownMessageIsSentOnceWhenCountdownStarts() {
+        startTwoTeams();
+        assertEquals(1, env.messages.stream().filter(m -> m.equals("countdown:null")).count());
+        scheduler.tick(20 * 5);
+        assertEquals(1, env.messages.stream().filter(m -> m.equals("countdown:null")).count());
+    }
+
+    private static final class FixedRandom extends java.util.Random {
+        int next;
+
+        @Override
+        public int nextInt(int bound) {
+            return Math.min(next, bound - 1);
+        }
+    }
+
+    private long reminders() {
+        return env.messages.stream().filter(m -> m.equals("lobby_reminders:null")).count();
+    }
+
+    @Test
+    void lobbyRemindersFireAfterRandomDelaysWithinConfiguredRange() {
+        FixedRandom random = new FixedRandom();
+        game = new GameManager(config(2, 3), new Arena(0, 0, 20, 101, COLOURS), env, scheduler, survival, random);
+        random.next = 0; // delay = min = 30 s
+        game.startLobbyReminders();
+        scheduler.tick(30 * 20 - 1);
+        assertEquals(0, reminders());
+        random.next = 30; // next delay = max = 60 s
+        scheduler.tick(1);
+        assertEquals(1, reminders());
+        scheduler.tick(60 * 20 - 1);
+        assertEquals(1, reminders());
+        scheduler.tick(1);
+        assertEquals(2, reminders());
+    }
+
+    @Test
+    void lobbyRemindersStopWhenLobbyEnds() {
+        FixedRandom random = new FixedRandom();
+        game = new GameManager(config(2, 3), new Arena(0, 0, 20, 101, COLOURS), env, scheduler, survival, random);
+        game.startLobbyReminders();
+        startTwoTeams();
+        scheduler.tick(20 * 120);
+        assertEquals(0, reminders());
+    }
+
+    @Test
+    void lobbyRemindersRestartOnReset() {
+        FixedRandom random = new FixedRandom();
+        game = new GameManager(config(2, 3), new Arena(0, 0, 20, 101, COLOURS), env, scheduler, survival, random);
+        game.startLobbyReminders();
+        startTwoTeams();
+        game.reset();
+        scheduler.tick(30 * 20);
+        assertEquals(1, reminders());
+    }
+
+    @Test
+    void remindersNeverStartOutsideLobby() {
+        startTwoTeams();
+        game.startLobbyReminders();
+        scheduler.tick(20 * 120);
+        assertEquals(0, reminders());
     }
 
     @Test

@@ -43,6 +43,26 @@ class StairwayCommandTest {
         MockBukkit.unmock();
     }
 
+    @Test
+    void reloadMessagesReReadsTheFileInTheDataFolder() throws Exception {
+        java.io.File file = new java.io.File(plugin.getDataFolder(), "messages.json");
+        assertTrue(file.isFile(), "default messages.json is copied on first run");
+        java.nio.file.Files.writeString(file.toPath(), "{\"countdown\": [\"custom countdown\"]}");
+        drain(alice);
+        admin.performCommand("stairway reloadmessages");
+        assertTrue(drain(admin).contains("reloaded"));
+        admin.performCommand("stairway assign Alice red");
+        admin.performCommand("stairway assign Bob blue");
+        admin.performCommand("stairway start");
+        assertTrue(drain(alice).contains("custom countdown"));
+    }
+
+    @Test
+    void reloadMessagesRequiresAdmin() {
+        alice.performCommand("stairway reloadmessages");
+        assertFalse(drain(alice).contains("reloaded"));
+    }
+
     private String drain(PlayerMock p) {
         StringBuilder sb = new StringBuilder();
         String m;

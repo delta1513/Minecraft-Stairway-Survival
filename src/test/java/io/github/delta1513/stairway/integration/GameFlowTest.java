@@ -150,7 +150,7 @@ class GameFlowTest {
     }
 
     @Test
-    void ringEntryAppliesEffectsOnceAndWildAppliesWither() {
+    void ringEntryAppliesEffectsAndWildAppliesWither() {
         PlayerMock[] ps = startBuild();
         PlayerMock a = ps[0];
         Plot red = plot("red");
@@ -160,28 +160,81 @@ class GameFlowTest {
         a.teleport(new Location(world, red.cx() + 0.5 + 2, 70, red.cz() + 0.5)); // x offset 2 -> d = 1 -> ring
         server.getScheduler().performTicks(1);
         assertNotNull(a.getPotionEffect(PotionEffectType.POISON));
-        assertEquals(2, a.getPotionEffect(PotionEffectType.SLOWNESS).getAmplifier());
-        assertEquals(4, a.getPotionEffect(PotionEffectType.MINING_FATIGUE).getAmplifier());
+        assertEquals(1, a.getPotionEffect(PotionEffectType.POISON).getAmplifier());
+        assertEquals(0, a.getPotionEffect(PotionEffectType.BLINDNESS).getAmplifier());
+        assertEquals(0, a.getPotionEffect(PotionEffectType.NAUSEA).getAmplifier());
+        assertEquals(9, a.getPotionEffect(PotionEffectType.SLOWNESS).getAmplifier());
+        assertEquals(9, a.getPotionEffect(PotionEffectType.MINING_FATIGUE).getAmplifier());
+        assertEquals(0, a.getPotionEffect(PotionEffectType.HUNGER).getAmplifier());
+        assertEquals(4, a.getPotionEffect(PotionEffectType.WEAKNESS).getAmplifier());
+        assertEquals(60, a.getPotionEffect(PotionEffectType.POISON).getDuration());
         assertNull(a.getPotionEffect(PotionEffectType.WITHER));
 
         a.teleport(new Location(world, red.cx() + 0.5 + 3, 70, red.cz() + 0.5)); // wild
         server.getScheduler().performTicks(1);
         var wither = a.getPotionEffect(PotionEffectType.WITHER);
         assertNotNull(wither);
-        assertEquals(4, wither.getAmplifier());
+        assertEquals(9, wither.getAmplifier());
         assertTrue(wither.isInfinite());
     }
 
     @Test
-    void ringEffectsNotRefreshedWhileStayingInRing() {
+    void ringEffectsAreRefreshedAtFullDurationWhileStayingInRing() {
         PlayerMock[] ps = startBuild();
         PlayerMock a = ps[0];
         Plot red = plot("red");
         a.teleport(new Location(world, red.cx() + 0.5 + 2, 70, red.cz() + 0.5));
         server.getScheduler().performTicks(1);
         a.removePotionEffect(PotionEffectType.POISON);
+        a.addPotionEffect(new org.bukkit.potion.PotionEffect(PotionEffectType.SLOWNESS, 5, 0));
+        server.getScheduler().performTicks(2);
+        assertNotNull(a.getPotionEffect(PotionEffectType.POISON));
+        assertEquals(60, a.getPotionEffect(PotionEffectType.POISON).getDuration());
+        assertEquals(9, a.getPotionEffect(PotionEffectType.SLOWNESS).getAmplifier());
+    }
+
+    @Test
+    void ringEffectsAreNotRefreshedOnceTheRingIsLeft() {
+        PlayerMock[] ps = startBuild();
+        PlayerMock a = ps[0];
+        Plot red = plot("red");
+        a.teleport(new Location(world, red.cx() + 0.5 + 2, 70, red.cz() + 0.5));
+        server.getScheduler().performTicks(1);
+        a.teleport(new Location(world, red.cx() + 0.5, 70, red.cz() + 0.5)); // inside the plot
+        a.removePotionEffect(PotionEffectType.POISON);
         server.getScheduler().performTicks(5);
         assertNull(a.getPotionEffect(PotionEffectType.POISON));
+    }
+
+    @Test
+    void ringAndWildBroadcastTheirMessagesOnTransitionsOnly() {
+        PlayerMock[] ps = startBuild();
+        PlayerMock a = ps[0];
+        Plot red = plot("red");
+        drain(a);
+        a.teleport(new Location(world, red.cx() + 0.5 + 2, 70, red.cz() + 0.5));
+        server.getScheduler().performTicks(5);
+        String ring = drain(a);
+        assertEquals(1, count(ring, "wandered into the ring"), ring);
+        assertTrue(ring.contains("Alice"), ring);
+
+        a.teleport(new Location(world, red.cx() + 0.5 + 3, 70, red.cz() + 0.5));
+        server.getScheduler().performTicks(5);
+        String wild = drain(a);
+        assertEquals(1, count(wild, "stepped into the wild"), wild);
+    }
+
+    private static int count(String text, String needle) {
+        return text.split(java.util.regex.Pattern.quote(needle), -1).length - 1;
+    }
+
+    private static String drain(PlayerMock p) {
+        StringBuilder sb = new StringBuilder();
+        String m;
+        while ((m = p.nextMessage()) != null) {
+            sb.append(m).append('\n');
+        }
+        return sb.toString();
     }
 
     @Test

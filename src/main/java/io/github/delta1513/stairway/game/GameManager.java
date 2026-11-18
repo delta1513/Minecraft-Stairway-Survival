@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
@@ -41,9 +42,19 @@ public final class GameManager {
     private GameScheduler.Handle countdownTask;
     private int countdownLeft;
     private boolean survivalRan;
+    private final Random random;
+    private GameScheduler.Handle lobbyReminderTask;
+    private final List<GameScheduler.Handle> pendingPenalties = new ArrayList<>();
 
     public GameManager(GameConfig config, Arena arena, GameEnvironment env, GameScheduler scheduler,
             SurvivalPhaseHandler survivalHandler) {
+        this(config, arena, env, scheduler, survivalHandler, new Random());
+    }
+
+    /** @param random picks the lobby reminder delays */
+    public GameManager(GameConfig config, Arena arena, GameEnvironment env, GameScheduler scheduler,
+            SurvivalPhaseHandler survivalHandler, Random random) {
+        this.random = random;
         this.config = config;
         this.arena = arena;
         this.env = env;
@@ -98,6 +109,38 @@ public final class GameManager {
     }
 
     // ---- LOBBY (PLAN.md §4.1) ----
+
+    /**
+     * Starts the lobby reminder messages (PLAN.md §15.2): one {@code lobby_reminders} message after each random
+     * delay between {@code lobby-reminder-min-seconds} and {@code lobby-reminder-max-seconds}, for as long as the
+     * phase is LOBBY. Called on enable; {@link #reset()} restarts it.
+     */
+    public void startLobbyReminders() {
+        stopLobbyReminders();
+        if (phase == Phase.LOBBY) {
+            scheduleLobbyReminder();
+        }
+    }
+
+    private void scheduleLobbyReminder() {
+        int min = config.lobbyReminderMinSeconds();
+        int seconds = min + random.nextInt(config.lobbyReminderMaxSeconds() - min + 1);
+        lobbyReminderTask = scheduler.runLater(seconds * TICKS_PER_SECOND, () -> {
+            if (phase != Phase.LOBBY) {
+                lobbyReminderTask = null;
+                return;
+            }
+            env.message("lobby_reminders", null);
+            scheduleLobbyReminder();
+        });
+    }
+
+    private void stopLobbyReminders() {
+        if (lobbyReminderTask != null) {
+            lobbyReminderTask.cancel();
+            lobbyReminderTask = null;
+        }
+    }
 
     public AssignResult assign(UUID player, String colour) {
         if (phase != Phase.LOBBY) {
@@ -191,6 +234,7 @@ public final class GameManager {
                 .sorted(Comparator.comparingInt(Plot::index))
                 .toList();
         setPhase(Phase.COUNTDOWN);
+        env.message("countdown", null);
         env.preparePlots(activePlots);
         for (UUID id : env.onlinePlayers()) {
             Plot plot = assignments.get(id);
@@ -240,14 +284,16 @@ public final class GameManager {
 
     // ---- SURVIVAL (PLAN.md §4.4) ----
 
-    /** Enters SURVIVAL from BUILD. {@code message} (nullable) is broadcast first. */
-    public void startSurvival(String message) {
+    /**
+     * Enters SURVIVAL from BUILD and broadcasts the {@code survival_start} message.
+     *
+     * @param trigger the player who reached the trigger height, or {@code null} when an admin forced it
+     */
+    public void startSurvival(UUID trigger) {
         if (phase != Phase.BUILD) {
             return;
         }
-        if (message != null) {
-            env.broadcast(message);
-        }
+        env.message("survival_start", trigger);
         survivalRan = true;
         setPhase(Phase.SURVIVAL);
         survivalHandler.start();
@@ -269,14 +315,32 @@ public final class GameManager {
             return;
         }
         if (bedSpawn) {
-            scheduler.runLater(POST_RESPAWN_DELAY_TICKS, () -> {
-                if (phase == Phase.BUILD && isAliveParticipant(player)) {
-                    env.applyRandomPenalty(player);
-                }
-            });
+            scheduler.runLater(POST_RESPAWN_DELAY_TICKS, () -> spinWheel(player));
         } else {
             scheduler.runLater(POST_RESPAWN_DELAY_TICKS, () -> disqualify(player, "no bed"));
         }
+    }
+
+    /** Wheel spin (PLAN.md §15.3): pick a penalty, announce the spin, apply the penalty a few seconds later. */
+    private void spinWheel(UUID player) {
+        if (!canBePenalised(player)) {
+            return;
+        }
+        Runnable penalty = env.pickPenalty(player);
+        env.message("wheel_spin", player);
+        GameScheduler.Handle[] self = new GameScheduler.Handle[1];
+        self[0] = scheduler.runLater(config.wheelSpinSeconds() * TICKS_PER_SECOND, () -> {
+            pendingPenalties.remove(self[0]);
+            if (canBePenalised(player)) {
+                penalty.run();
+            }
+        });
+        pendingPenalties.add(self[0]);
+    }
+
+    /** Online, alive participant during BUILD. */
+    private boolean canBePenalised(UUID player) {
+        return phase == Phase.BUILD && isAliveParticipant(player) && env.onlinePlayers().contains(player);
     }
 
     /** {@code PlayerDeathEvent}: only SURVIVAL deaths matter here (BUILD is handled on respawn). */
@@ -325,6 +389,7 @@ public final class GameManager {
     // ---- ENDED / reset (PLAN.md §4.5) ----
 
     private void endGame(Plot winner) {
+        cancelPendingPenalties();
         stopSurvivalIfRunning();
         setPhase(Phase.ENDED);
         env.releasePlots();
@@ -334,6 +399,7 @@ public final class GameManager {
     /** Back to LOBBY: clears assignments, sends everyone to the lobby, re-applies world settings. */
     public void reset() {
         cancelCountdown();
+        cancelPendingPenalties();
         stopSurvivalIfRunning();
         env.releasePlots();
         assignments.clear();
@@ -345,6 +411,12 @@ public final class GameManager {
         for (UUID id : env.onlinePlayers()) {
             env.sendToLobby(id);
         }
+        startLobbyReminders();
+    }
+
+    private void cancelPendingPenalties() {
+        pendingPenalties.forEach(GameScheduler.Handle::cancel);
+        pendingPenalties.clear();
     }
 
     private void stopSurvivalIfRunning() {
@@ -357,6 +429,9 @@ public final class GameManager {
     private void setPhase(Phase next) {
         Phase from = phase;
         phase = next;
+        if (next != Phase.LOBBY) {
+            stopLobbyReminders();
+        }
         for (PhaseListener l : listeners) {
             l.phaseChanged(from, next);
         }

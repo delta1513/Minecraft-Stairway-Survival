@@ -38,8 +38,7 @@ public final class TriggerTask implements Runnable {
             }
             if (game.phase() == Phase.BUILD && player.getGameMode() == GameMode.SURVIVAL
                     && player.getY() >= config.survivalTriggerY()) {
-                game.startSurvival(player.getName() + " reached Y=" + config.survivalTriggerY()
-                        + "! The survival phase begins.");
+game.startSurvival(player.getUniqueId());
             }
         }
     }

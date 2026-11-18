@@ -37,8 +37,20 @@ public interface GameEnvironment {
     /** Spectator mode. For a player outside the game world, also teleports to the spawn surface. */
     void setSpectator(UUID player);
 
-    /** Applies one random death penalty to the player, if online. */
-    void applyRandomPenalty(UUID player);
+    /**
+     * Broadcasts a flavour message from {@code messages.json} (PLAN.md §15).
+     *
+     * @param section the message section, e.g. {@code countdown} or {@code effects.DEATH_FEATHERS}
+     * @param target  the player the message is about, or {@code null} for none
+     */
+    void message(String section, UUID target);
+
+    /**
+     * Picks one random death penalty for the player (PLAN.md §9.1) and returns the action that applies it and
+     * broadcasts its effect message; run it when the wheel spin (§15.3) is over. The action does nothing if
+     * the player is offline by then.
+     */
+    Runnable pickPenalty(UUID player);
 
     /** Winner announcement and title; {@code winner} is null when nobody is left. */
     void announceWinner(Plot winner);

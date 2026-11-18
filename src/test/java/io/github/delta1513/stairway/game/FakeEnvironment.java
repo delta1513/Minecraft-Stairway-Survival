@@ -13,6 +13,8 @@ final class FakeEnvironment implements GameEnvironment {
 
     final Set<UUID> online = new LinkedHashSet<>();
     final List<String> broadcasts = new ArrayList<>();
+    /** "section:target" for every flavour message (target is null for none). */
+    final List<String> messages = new ArrayList<>();
     final List<String> calls = new ArrayList<>();
     final List<Integer> countdownShown = new ArrayList<>();
     Plot winner;
@@ -72,8 +74,14 @@ final class FakeEnvironment implements GameEnvironment {
     }
 
     @Override
-    public void applyRandomPenalty(UUID player) {
-        calls.add("penalty:" + player);
+    public void message(String section, UUID target) {
+        messages.add(section + ":" + target);
+    }
+
+    @Override
+    public Runnable pickPenalty(UUID player) {
+        calls.add("pick:" + player);
+        return () -> calls.add("penalty:" + player);
     }
 
     @Override
