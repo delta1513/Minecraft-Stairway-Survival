@@ -5,6 +5,28 @@ A PaperMC plugin for a minigame. Teams are trapped in 3×3 plots and race to cli
 - Player rules: `Minecraft Stairway Survival Challenge.md`
 - Implementation spec: `PLAN.md`
 
+## Commands
+
+Colours are `red`, `orange`, `yellow`, `lime`, `blue` and `purple`.
+
+### Player commands (permission `stairway.play`, everyone by default)
+
+| Command | When | What it does |
+|---|---|---|
+| `/assignme <colour>` | Lobby | Joins that colour's team. You can't switch teams once you've joined |
+
+### Admin commands (permission `stairway.admin`, ops by default)
+
+| Command | When | What it does |
+|---|---|---|
+| `/stairway status` | Any time | Shows the phase, the teams, how many players are still in, and the next layer to collapse |
+| `/stairway assign <player> <colour>` | Lobby | Puts a player on a team, or moves them to a different one |
+| `/stairway start` | Lobby | Starts the countdown now. Anyone without a team becomes a spectator |
+| `/stairway survival` | Build phase | Jumps straight to the survival phase (handy for testing) |
+| `/stairway disqualify <player>` | Build or survival phase | Disqualifies a player. This also works on offline players |
+| `/stairway reset` | Any time | Ends the game and goes back to the lobby, clearing all teams. The world is not restored |
+| `/stairway reloadmessages` | Any time | Reloads `plugins/StairwaySurvival/messages.json` |
+
 ## Testing in a real game
 
 You need **Java 25**, because Paper 26.3 requires it.
