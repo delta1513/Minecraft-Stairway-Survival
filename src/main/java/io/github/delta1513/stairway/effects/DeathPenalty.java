@@ -52,6 +52,15 @@ public enum DeathPenalty {
         this.action = action;
     }
 
+    /**
+     * Key of this effect in {@code messages.json} under {@code effects} (PLAN.md §15.2): the constant name
+     * with the {@code DEATH_} prefix; the {@code _X} of "Jump Boost X" is dropped.
+     */
+    public String messageKey() {
+        String name = name();
+        return "DEATH_" + (name.endsWith("_X") ? name.substring(0, name.length() - 2) : name);
+    }
+
     /** Text for telling the player (and chat) which penalty they got. */
     public String displayName() {
         return displayName;

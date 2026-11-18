@@ -79,6 +79,15 @@ public enum SurvivalEffect {
         this.action = action;
     }
 
+    /**
+     * Key of this effect in {@code messages.json} under {@code effects} (PLAN.md §15.2): the constant name
+     * with the {@code SURVIVAL_} prefix; the {@code _X} of "Jump Boost X" is dropped.
+     */
+    public String messageKey() {
+        String name = name();
+        return "SURVIVAL_" + (name.endsWith("_X") ? name.substring(0, name.length() - 2) : name);
+    }
+
     /** Name for the chat broadcast when the effect fires. */
     public String displayName() {
         return displayName;

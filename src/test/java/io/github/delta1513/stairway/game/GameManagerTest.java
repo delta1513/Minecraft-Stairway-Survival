@@ -27,7 +27,7 @@ class GameManagerTest {
     private final UUID d = UUID.fromString("dddd0000-0000-0000-0000-000000000004");
 
     static GameConfig config(int minTeams, int countdownSeconds) {
-        return new GameConfig("world", minTeams, countdownSeconds, 319, 60, 2, 101, 20, 1, 10, 64, 300, 20000, 200,
+        return new GameConfig("world", minTeams, countdownSeconds, 319, 60, 2, 101, 20, 1, 10, 64, 300, 3, Map.of(), 10, 5, 30, 60, 20000, 200,
                 List.of("GRANITE"), COLOURS, Map.of());
     }
 

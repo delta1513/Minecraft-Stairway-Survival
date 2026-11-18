@@ -10,6 +10,12 @@ zone-check-interval-ticks: 1
 particle-interval-ticks: 10
 particle-view-distance: 64
 thunder-duration-seconds: 300
+ring-effect-seconds: 3
+ring-effects: {POISON: 2, BLINDNESS: 1, NAUSEA: 1, SLOWNESS: 10, MINING_FATIGUE: 10, HUNGER: 1, WEAKNESS: 5}   # PotionEffectType key: level
+wither-level: 10
+wheel-spin-seconds: 5
+lobby-reminder-min-seconds: 30
+lobby-reminder-max-seconds: 60
 block-ops-per-tick: 20000
 entity-spawns-per-tick: 200
 other-stones: [GRANITE, DIORITE, ANDESITE, TUFF]

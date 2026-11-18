@@ -49,10 +49,48 @@ class GameConfigTest {
         assertEquals(10, c.particleIntervalTicks());
         assertEquals(64, c.particleViewDistance());
         assertEquals(300, c.thunderDurationSeconds());
+        assertEquals(3, c.ringEffectSeconds());
+        assertEquals(10, c.witherLevel());
+        assertEquals(5, c.wheelSpinSeconds());
+        assertEquals(30, c.lobbyReminderMinSeconds());
+        assertEquals(60, c.lobbyReminderMaxSeconds());
         assertEquals(20_000, c.blockOpsPerTick());
         assertEquals(200, c.entitySpawnsPerTick());
         assertEquals(List.of("GRANITE", "DIORITE", "ANDESITE", "TUFF"), c.otherStones());
         assertEquals(List.of("red", "orange", "yellow", "lime", "blue", "purple"), c.colours());
+    }
+
+    @Test
+    void ringEffectDefaultsKeepOrderAndLevels() throws Exception {
+        GameConfig c = GameConfig.from(bundledDefaults());
+        assertEquals(List.of("POISON", "BLINDNESS", "NAUSEA", "SLOWNESS", "MINING_FATIGUE", "HUNGER", "WEAKNESS"),
+                List.copyOf(c.ringEffects().keySet()));
+        assertEquals(Map.of("POISON", 2, "BLINDNESS", 1, "NAUSEA", 1, "SLOWNESS", 10, "MINING_FATIGUE", 10,
+                "HUNGER", 1, "WEAKNESS", 5), c.ringEffects());
+    }
+
+    @Test
+    void newKeysCanBeOverridden() throws Exception {
+        GameConfig c = withOverrides("""
+                ring-effect-seconds: 7
+                ring-effects: {POISON: 1}
+                wither-level: 3
+                wheel-spin-seconds: 0
+                lobby-reminder-min-seconds: 5
+                lobby-reminder-max-seconds: 6
+                """);
+        assertEquals(7, c.ringEffectSeconds());
+        assertEquals(Map.of("POISON", 1), c.ringEffects());
+        assertEquals(3, c.witherLevel());
+        assertEquals(0, c.wheelSpinSeconds());
+        assertEquals(5, c.lobbyReminderMinSeconds());
+        assertEquals(6, c.lobbyReminderMaxSeconds());
+    }
+
+    @Test
+    void rejectsLobbyReminderMaxBelowMin() {
+        assertThrows(IllegalArgumentException.class, () -> withOverrides(
+                "lobby-reminder-min-seconds: 50\nlobby-reminder-max-seconds: 40"));
     }
 
     @Test

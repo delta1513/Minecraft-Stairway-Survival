@@ -1,0 +1,41 @@
+{
+  "lobby_reminders": [
+    "<yellow>Pick a team with <gold>/assignme red</gold> (or any other colour) and let the climbing begin!</yellow>"
+  ],
+  "countdown": [
+    "<gold>Stairs up, nerves down: the climb starts soon!</gold>"
+  ],
+  "survival_start": [
+    "<red><bold>PLAYER_NAME</bold> touched the sky! The floor starts to vanish. Hold on tight!</red>"
+  ],
+  "ring_entered": [
+    "<yellow>PLAYER_NAME wandered into the ring and feels a little woozy.</yellow>"
+  ],
+  "wither_doomed": [
+    "<dark_red>PLAYER_NAME stepped into the wild. That was a very short adventure.</dark_red>"
+  ],
+  "wheel_spin": [
+    "<light_purple>The Wheel of Misfortune is spinning...</light_purple>"
+  ],
+  "effects": {
+    "DEATH_FEATHERS": ["<white>PLAYER_NAME's pockets are now stuffed with feathers. Fluffy!</white>"],
+    "DEATH_BLINDNESS": ["<gray>PLAYER_NAME can't see a thing. Feel your way up!</gray>"],
+    "DEATH_NAUSEA": ["<green>PLAYER_NAME's world is wobbling. Mind the edge!</green>"],
+    "DEATH_WATER_ABOVE": ["<aqua>A splash of water appears above PLAYER_NAME. Bath time!</aqua>"],
+    "DEATH_THUNDERSTORM": ["<dark_purple>PLAYER_NAME angered the sky: thunder rolls in!</dark_purple>"],
+    "DEATH_JUMP_BOOST": ["<green>PLAYER_NAME's legs turned into springs. Boing!</green>"],
+    "SURVIVAL_PERMANENT_NIGHT": ["<dark_blue>The sun has clocked out. Night lasts forever now.</dark_blue>"],
+    "SURVIVAL_THUNDERSTORM": ["<dark_purple>Dark clouds gather: a thunderstorm rolls over the arena!</dark_purple>"],
+    "SURVIVAL_REMOVE_PLANKS": ["<gold>All planks have vanished. Hope you did not like wood!</gold>"],
+    "SURVIVAL_REMOVE_ORES": ["<gold>Every ore has disappeared. Finders keepers, no longer!</gold>"],
+    "SURVIVAL_ZOMBIE_SKELETON": ["<red>Surprise guests! A zombie and a skeleton drop in next to everyone.</red>"],
+    "SURVIVAL_REMOVE_OTHER_STONES": ["<gray>Granite, diorite, andesite and tuff are gone. Plain stone only!</gray>"],
+    "SURVIVAL_REMOVE_GRASS": ["<green>The grass is no longer greener: it is gone.</green>"],
+    "SURVIVAL_SILVERFISH": ["<gray>Tiny wiggly silverfish are on the loose around everyone!</gray>"],
+    "SURVIVAL_LEAVES_TO_CHICKENS": ["<yellow>The leaves turned into chickens. Cluck cluck!</yellow>"],
+    "SURVIVAL_FLOWERS_TO_CREEPERS": ["<green>Every flower hatched a creeper. Do not stop to smell them!</green>"],
+    "SURVIVAL_WATER_TO_LAVA": ["<gold>All water has turned into lava. The floor is hot!</gold>"],
+    "SURVIVAL_HUNGER_NAUSEA": ["<dark_green>Everyone's tummy is growling and queasy at the same time.</dark_green>"],
+    "SURVIVAL_JUMP_BOOST": ["<green>Everyone gets super springy legs. Jump, jump, jump!</green>"]
+  }
+}
