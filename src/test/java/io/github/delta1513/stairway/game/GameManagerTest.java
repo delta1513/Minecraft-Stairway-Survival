@@ -28,7 +28,9 @@ class GameManagerTest {
 
     static GameConfig config(int minTeams, int countdownSeconds) {
         return new GameConfig("world", minTeams, countdownSeconds, 319, 60, 2, 101, 20, 1, 10, 64, 300, 3, Map.of(), 10, 5, 30, 60, 20000, 200,
-                List.of("GRANITE"), COLOURS, Map.of());
+                List.of("GRANITE"), COLOURS, Map.of(),
+                GameConfig.uniformWeights(io.github.delta1513.stairway.effects.DeathPenalty.class),
+                GameConfig.uniformWeights(io.github.delta1513.stairway.effects.SurvivalEffect.class));
     }
 
     @BeforeEach

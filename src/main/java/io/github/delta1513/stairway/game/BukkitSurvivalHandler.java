@@ -4,6 +4,7 @@ import io.github.delta1513.stairway.arena.Arena;
 import io.github.delta1513.stairway.config.GameConfig;
 import io.github.delta1513.stairway.effects.EffectContext;
 import io.github.delta1513.stairway.effects.SurvivalEffect;
+import io.github.delta1513.stairway.effects.WeightedPicker;
 import io.github.delta1513.stairway.world.BlockJobQueue;
 import io.github.delta1513.stairway.world.BukkitBlocks;
 import io.github.delta1513.stairway.world.LayerRemovalJob;
@@ -38,6 +39,7 @@ public final class BukkitSurvivalHandler implements SurvivalPhaseHandler {
     private final BlockJobQueue queue;
     private final Supplier<List<Player>> aliveParticipants;
     private final Random random;
+    private final WeightedPicker<SurvivalEffect> effectPicker;
     private final Executor scanExecutor;
     private final SurvivalClock clock;
     private final BossBar bossBar = BossBar.bossBar(Component.empty(), 1f, BossBar.Color.RED,
@@ -63,6 +65,7 @@ public final class BukkitSurvivalHandler implements SurvivalPhaseHandler {
         this.queue = queue;
         this.aliveParticipants = aliveParticipants;
         this.random = random;
+        this.effectPicker = config.survivalEffectPicker();
         this.scanExecutor = scanExecutor;
         // Floor starts at the bottom of the world (-64 in the overworld); the top is the last buildable layer.
         this.clock = new SurvivalClock(scheduler, world.getMinHeight(), world.getMaxHeight() - 1,
@@ -135,7 +138,7 @@ public final class BukkitSurvivalHandler implements SurvivalPhaseHandler {
         @Override
         public void fireEffect(int nextLayerY) {
             // Wheel spin (PLAN.md §15.3): pick now, announce the spin, apply the effect later.
-            SurvivalEffect effect = SurvivalEffect.random(random);
+            SurvivalEffect effect = effectPicker.pick(random);
             Region region = Region.gameplayArea(arena, nextLayerY, world.getMaxHeight() - 1);
             messages.broadcast("wheel_spin", null);
             GameScheduler.Handle[] self = new GameScheduler.Handle[1];

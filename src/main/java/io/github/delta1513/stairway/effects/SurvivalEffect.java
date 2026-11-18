@@ -2,7 +2,6 @@ package io.github.delta1513.stairway.effects;
 
 import io.github.delta1513.stairway.world.BlockMatcher;
 import io.github.delta1513.stairway.world.ScanReplaceJob;
-import java.util.Random;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import org.bukkit.GameRules;
@@ -17,7 +16,8 @@ import org.bukkit.potion.PotionEffectType;
 /**
  * The 13 random survival-phase effects (PLAN.md §10.2), in table order. {@link #apply} either acts
  * immediately (time, weather, potions, mob spawns) or submits a bulk job to the shared
- * {@code BlockJobQueue}, which then changes the blocks over the following ticks.
+ * {@code BlockJobQueue}, which then changes the blocks over the following ticks. Picked with replacement,
+ * weighted (config {@code survival-effect-weights}, see {@link WeightedPicker}).
  */
 public enum SurvivalEffect {
     PERMANENT_NIGHT("Permanent night", ctx -> {
@@ -96,12 +96,6 @@ public enum SurvivalEffect {
     /** Applies the effect. */
     public void apply(EffectContext ctx) {
         action.accept(ctx);
-    }
-
-    /** Uniform pick with replacement (PLAN.md §10.2). */
-    public static SurvivalEffect random(Random random) {
-        SurvivalEffect[] all = values();
-        return all[random.nextInt(all.length)];
     }
 
     static boolean isOre(Material m) {

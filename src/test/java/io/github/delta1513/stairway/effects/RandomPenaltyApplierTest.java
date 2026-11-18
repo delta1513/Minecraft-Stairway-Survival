@@ -54,7 +54,9 @@ class RandomPenaltyApplierTest {
     }
 
     private RandomPenaltyApplier applier(int index) {
-        return new RandomPenaltyApplier(fixed(index), 300, messages);
+        return new RandomPenaltyApplier(
+                new WeightedPicker<>(io.github.delta1513.stairway.config.GameConfig.uniformWeights(DeathPenalty.class)),
+                fixed(index), 300, messages);
     }
 
     @Test
@@ -80,6 +82,21 @@ class RandomPenaltyApplierTest {
         PlayerMock p = server.addPlayer();
         applier(DeathPenalty.FEATHERS.ordinal()).pickRandom().accept(p);
         assertTrue(p.getInventory().contains(Material.FEATHER));
+    }
+
+    @Test
+    void onlyNonZeroWeightIsEverPicked() {
+        java.util.Map<DeathPenalty, Integer> w = new java.util.EnumMap<>(DeathPenalty.class);
+        for (DeathPenalty d : DeathPenalty.values()) {
+            w.put(d, d == DeathPenalty.NAUSEA ? 5 : 0);
+        }
+        RandomPenaltyApplier a = new RandomPenaltyApplier(new WeightedPicker<>(w), new Random(99), 300, messages);
+        PlayerMock p = server.addPlayer("Steve");
+        for (int i = 0; i < 50; i++) {
+            a.pickRandom().accept(p);
+        }
+        assertEquals(50, broadcasts.size());
+        broadcasts.forEach(b -> assertEquals("DEATH_NAUSEA for Steve", b));
     }
 
     @Test

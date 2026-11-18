@@ -8,6 +8,8 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
+import io.github.delta1513.stairway.effects.DeathPenalty;
+import io.github.delta1513.stairway.effects.SurvivalEffect;
 import java.util.List;
 import java.util.Map;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -169,5 +171,50 @@ class GameConfigTest {
         GameConfig c = GameConfig.from(bundledDefaults());
         assertThrows(UnsupportedOperationException.class, () -> c.starterKit().put("DIRT", 1));
         assertThrows(UnsupportedOperationException.class, () -> c.colours().add("pink"));
+    }
+
+    @Test
+    void weightDefaultsAreOneForEveryConstant() throws Exception {
+        GameConfig c = GameConfig.from(bundledDefaults());
+        for (DeathPenalty d : DeathPenalty.values()) {
+            assertEquals(1, c.deathPenaltyWeights().get(d), d.name());
+        }
+        for (SurvivalEffect e : SurvivalEffect.values()) {
+            assertEquals(1, c.survivalEffectWeights().get(e), e.name());
+        }
+        assertEquals(DeathPenalty.values().length, c.deathPenaltyWeights().size());
+        assertEquals(SurvivalEffect.values().length, c.survivalEffectWeights().size());
+    }
+
+    @Test
+    void partialWeightOverrideKeepsOthersAtOne() throws Exception {
+        GameConfig c = withOverrides("""
+                death-penalty-weights:
+                  NAUSEA: 5
+                  FEATHERS: 0
+                survival-effect-weights:
+                  silverfish: 3
+                """);
+        assertEquals(5, c.deathPenaltyWeights().get(DeathPenalty.NAUSEA));
+        assertEquals(0, c.deathPenaltyWeights().get(DeathPenalty.FEATHERS));
+        assertEquals(1, c.deathPenaltyWeights().get(DeathPenalty.BLINDNESS));
+        assertEquals(3, c.survivalEffectWeights().get(SurvivalEffect.SILVERFISH)); // case-insensitive key
+        assertEquals(1, c.survivalEffectWeights().get(SurvivalEffect.REMOVE_ORES));
+        assertNotNull(c.deathPenaltyPicker());
+        assertNotNull(c.survivalEffectPicker());
+    }
+
+    @Test
+    void rejectsBadWeights() {
+        var unknown = assertThrows(IllegalArgumentException.class,
+                () -> withOverrides("death-penalty-weights: {BOGUS: 2}"));
+        assertTrue(unknown.getMessage().contains("BOGUS") && unknown.getMessage().contains("death-penalty-weights"));
+        assertThrows(IllegalArgumentException.class, () -> withOverrides("death-penalty-weights: {NAUSEA: -1}"));
+        assertThrows(IllegalArgumentException.class, () -> withOverrides("survival-effect-weights: {NAUSEA: 1}"));
+        assertThrows(IllegalArgumentException.class, () -> withOverrides("death-penalty-weights: {NAUSEA: lots}"));
+        assertThrows(IllegalArgumentException.class, () -> withOverrides("death-penalty-weights: {NAUSEA: 1.5}"));
+        assertThrows(IllegalArgumentException.class, () -> withOverrides("""
+                death-penalty-weights: {FEATHERS: 0, BLINDNESS: 0, NAUSEA: 0, WATER_ABOVE: 0, THUNDERSTORM: 0, JUMP_BOOST_X: 0}
+                """));
     }
 }

@@ -27,3 +27,27 @@ starter-kit:
   TEAM_BED: 4
   BREAD: 4
   WATER_BUCKET: 1
+
+# Likelihood scores for the random effects: probability = weight / sum of all weights. 0 disables an effect.
+# Keys left out default to 1. At least one weight per section must be above 0.
+death-penalty-weights:
+  FEATHERS: 1
+  BLINDNESS: 1
+  NAUSEA: 1
+  WATER_ABOVE: 1
+  THUNDERSTORM: 1
+  JUMP_BOOST_X: 1
+survival-effect-weights:
+  PERMANENT_NIGHT: 1
+  THUNDERSTORM: 1
+  REMOVE_PLANKS: 1
+  REMOVE_ORES: 1
+  ZOMBIE_SKELETON: 1
+  REMOVE_OTHER_STONES: 1
+  REMOVE_GRASS: 1
+  SILVERFISH: 1
+  LEAVES_TO_CHICKENS: 1
+  FLOWERS_TO_CREEPERS: 1
+  WATER_TO_LAVA: 1
+  HUNGER_NAUSEA: 1
+  JUMP_BOOST_X: 1

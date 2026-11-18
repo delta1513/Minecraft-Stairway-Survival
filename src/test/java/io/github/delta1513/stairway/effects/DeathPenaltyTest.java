@@ -44,6 +44,10 @@ class DeathPenaltyTest {
         assertEquals(DeathPenalty.JUMP_BOOST_X, DeathPenalty.values()[5]);
     }
 
+    private static WeightedPicker<DeathPenalty> picker() {
+        return new WeightedPicker<>(io.github.delta1513.stairway.config.GameConfig.uniformWeights(DeathPenalty.class));
+    }
+
     @Test
     void pickerUsesInjectedRandomUniformly() {
         Random fixed = new Random() {
@@ -53,11 +57,11 @@ class DeathPenaltyTest {
                 return 3;
             }
         };
-        assertEquals(DeathPenalty.WATER_ABOVE, DeathPenalty.random(fixed));
+        assertEquals(DeathPenalty.WATER_ABOVE, picker().pick(fixed));
         Map<DeathPenalty, Integer> counts = new EnumMap<>(DeathPenalty.class);
         Random r = new Random(1);
         for (int i = 0; i < 6000; i++) {
-            counts.merge(DeathPenalty.random(r), 1, Integer::sum);
+            counts.merge(picker().pick(r), 1, Integer::sum);
         }
         assertEquals(6, counts.size());
         counts.values().forEach(c -> assertTrue(c > 800 && c < 1200, "count " + c));

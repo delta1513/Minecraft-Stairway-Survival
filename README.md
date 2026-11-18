@@ -27,6 +27,18 @@ Colours are `red`, `orange`, `yellow`, `lime`, `blue` and `purple`.
 | `/stairway reset` | Any time | Ends the game and goes back to the lobby, clearing all teams. The world is not restored |
 | `/stairway reloadmessages` | Any time | Reloads `plugins/StairwaySurvival/messages.json` |
 
+## Random effect likelihood
+
+Two sections in `config.yml` control how likely each random effect is. Each effect has an integer weight, and
+its probability is `weight / sum of all weights` in that section. A weight of `0` disables the effect. Keys you
+leave out default to `1`, and at least one weight in each section must be above `0`. Keys are not case-sensitive.
+
+- `death-penalty-weights`: the six build-phase death penalties (`FEATHERS`, `BLINDNESS`, `NAUSEA`, `WATER_ABOVE`, `THUNDERSTORM`, `JUMP_BOOST_X`).
+- `survival-effect-weights`: the 13 survival-phase effects (`PERMANENT_NIGHT` ... `JUMP_BOOST_X`, see the bundled `config.yml`).
+
+Example: with `NAUSEA: 5`, `FEATHERS: 0` and the other four death penalties left at `1`, the sum is 9, so
+nausea is picked 5/9 (about 56%) of the time, feathers never, and each other penalty 1/9 (about 11%).
+
 ## Testing in a real game
 
 You need **Java 25**, because Paper 26.3 requires it.

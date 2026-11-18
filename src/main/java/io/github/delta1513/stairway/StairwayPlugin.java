@@ -126,7 +126,7 @@ public class StairwayPlugin extends JavaPlugin {
 
     /** Wiring point for the death penalties (PLAN.md §9.1). */
     protected PenaltyApplier createPenaltyApplier() {
-        return new RandomPenaltyApplier(createRandom(), gameConfig.thunderDurationSeconds(), messages);
+        return new RandomPenaltyApplier(gameConfig.deathPenaltyPicker(), createRandom(), gameConfig.thunderDurationSeconds(), messages);
     }
 
     /** Wiring point for the survival phase (PLAN.md §4.4). */

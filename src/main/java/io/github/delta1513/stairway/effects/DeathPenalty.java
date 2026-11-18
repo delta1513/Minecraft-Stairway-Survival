@@ -1,6 +1,5 @@
 package io.github.delta1513.stairway.effects;
 
-import java.util.Random;
 import java.util.function.BiConsumer;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -11,6 +10,7 @@ import org.bukkit.potion.PotionEffectType;
 
 /**
  * The six build-phase death penalties (PLAN.md §9.1), applied one tick after a bed respawn.
+ * Picked by weight (config {@code death-penalty-weights}, see {@link WeightedPicker}).
  * {@link #apply} takes the player and the configured thunder duration (for the thunderstorm).
  */
 public enum DeathPenalty {
@@ -71,11 +71,5 @@ public enum DeathPenalty {
      */
     public void apply(Player player, int thunderDurationSeconds) {
         action.accept(player, thunderDurationSeconds);
-    }
-
-    /** Uniform random penalty (PLAN.md §9.1). */
-    public static DeathPenalty random(Random random) {
-        DeathPenalty[] all = values();
-        return all[random.nextInt(all.length)];
     }
 }

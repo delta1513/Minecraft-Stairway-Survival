@@ -76,6 +76,10 @@ class SurvivalEffectTest {
         assertEquals(SurvivalEffect.JUMP_BOOST_X, SurvivalEffect.values()[12]);
     }
 
+    private static WeightedPicker<SurvivalEffect> picker() {
+        return new WeightedPicker<>(io.github.delta1513.stairway.config.GameConfig.uniformWeights(SurvivalEffect.class));
+    }
+
     @Test
     void pickerUsesInjectedRandomUniformlyWithReplacement() {
         Random fixed = new Random() {
@@ -85,12 +89,12 @@ class SurvivalEffectTest {
                 return 4;
             }
         };
-        assertEquals(SurvivalEffect.ZOMBIE_SKELETON, SurvivalEffect.random(fixed));
-        assertEquals(SurvivalEffect.ZOMBIE_SKELETON, SurvivalEffect.random(fixed)); // repeats allowed
+        assertEquals(SurvivalEffect.ZOMBIE_SKELETON, picker().pick(fixed));
+        assertEquals(SurvivalEffect.ZOMBIE_SKELETON, picker().pick(fixed)); // repeats allowed
         Map<SurvivalEffect, Integer> counts = new EnumMap<>(SurvivalEffect.class);
         Random r = new Random(42);
         for (int i = 0; i < 13_000; i++) {
-            counts.merge(SurvivalEffect.random(r), 1, Integer::sum);
+            counts.merge(picker().pick(r), 1, Integer::sum);
         }
         assertEquals(13, counts.size());
         counts.values().forEach(c -> assertTrue(c > 800 && c < 1200, "count " + c));
